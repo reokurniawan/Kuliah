@@ -11,22 +11,21 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f8fafc; /* Latar belakang lebih lembut */
+            background-color: #f8fafc;
         }
         .tab-button.active {
             border-bottom-width: 3px;
             font-weight: 600;
         }
         .task-tab.active {
-            border-color: #3b82f6; /* Blue 500 */
-            color: #2563eb; /* Blue 600 */
+            border-color: #3b82f6; color: #2563eb;
         }
         .note-tab.active {
-            border-color: #f59e0b; /* Amber 500 */
-            color: #d97706; /* Amber 600 */
+            border-color: #f59e0b; color: #d97706;
         }
-        .form-container, .card {
+        .card {
             transition: transform 0.2s ease-in-out, box-shadow 0.3s ease-in-out;
+            cursor: pointer;
         }
         .card:hover {
             transform: translateY(-4px);
@@ -36,8 +35,11 @@
             border-top-color: #3b82f6;
             animation: spin 1s linear infinite;
         }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #modal-content { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
     </style>
 </head>
@@ -76,6 +78,7 @@
                         <div class="form-container bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                             <h2 class="text-xl font-semibold mb-4 text-blue-800">Tambah Tugas Baru</h2>
                             <form id="form-tugas" class="space-y-4">
+                                <!-- Form fields for tasks -->
                                 <div>
                                     <label for="tugas-matkul" class="block text-sm font-medium text-gray-700">Mata Kuliah</label>
                                     <input type="text" id="tugas-matkul" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
@@ -106,6 +109,7 @@
                         <div class="form-container bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                             <h2 class="text-xl font-semibold mb-4 text-amber-800">Tambah Catatan Materi</h2>
                             <form id="form-catatan" class="space-y-4">
+                                <!-- Form fields for notes -->
                                 <div>
                                     <label for="catatan-matkul" class="block text-sm font-medium text-gray-700">Mata Kuliah</label>
                                     <input type="text" id="catatan-matkul" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-amber-500 focus:border-amber-500">
@@ -131,15 +135,35 @@
         </div>
     </div>
 
+    <!-- Modal untuk Detail -->
+    <div id="detail-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 hidden z-50">
+        <div id="modal-content" class="bg-white rounded-lg shadow-xl w-full max-w-lg transform transition-all">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h3 id="modal-title" class="text-xl font-semibold text-gray-800">Detail</h3>
+                <button id="modal-close-btn" class="text-gray-400 hover:text-gray-600">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="modal-body" class="p-6 space-y-3 text-gray-600">
+                <!-- Konten detail akan dimasukkan di sini oleh JavaScript -->
+            </div>
+        </div>
+    </div>
+
+
     <script>
-        // PENTING: Ganti URL ini dengan URL Web App dari Google Apps Script Anda setelah deploy.
+        // URL Apps Script Anda telah diperbarui.
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzI_m3Ahft7J_NHBNNa3wcfqn4Lvbui12qFM5JNuS7G2c_Pu-An1FcDrquMFr-oyOSM/exec';
         
+        // Elemen Tab
         const tabTugas = document.getElementById('tab-tugas');
         const tabCatatan = document.getElementById('tab-catatan');
         const contentTugas = document.getElementById('content-tugas');
         const contentCatatan = document.getElementById('content-catatan');
 
+        // Elemen Form & List
         const formTugas = document.getElementById('form-tugas');
         const formCatatan = document.getElementById('form-catatan');
         const btnSubmitTugas = document.getElementById('btn-submit-tugas');
@@ -148,7 +172,49 @@
         const catatanList = document.getElementById('catatan-list');
         const loader = document.getElementById('loader');
 
-        // Fungsi untuk ganti tab
+        // Elemen Modal
+        const detailModal = document.getElementById('detail-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+
+        // Global state untuk menyimpan data
+        let allTugas = [];
+        let allCatatan = [];
+
+        // --- FUNGSI MODAL ---
+        function showTaskDetails(index) {
+            const task = allTugas[index];
+            const deadline = new Date(task.Deadline);
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const diffTime = deadline - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            modalTitle.innerText = `Detail Tugas: ${task['Mata Kuliah']}`;
+            modalBody.innerHTML = `
+                <p class="whitespace-pre-wrap"><strong class="font-semibold text-gray-900 block">Deskripsi Lengkap:</strong>${task.Deskripsi}</p>
+                <p><strong class="font-semibold text-gray-900">Deadline:</strong> ${deadline.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                <p><strong class="font-semibold text-gray-900">Status:</strong> ${diffDays < 0 ? 'Tugas ini sudah terlambat' : `Sisa waktu ${diffDays} hari`}</p>
+            `;
+            detailModal.classList.remove('hidden');
+        }
+
+        function showNoteDetails(index) {
+            const note = allCatatan[index];
+            modalTitle.innerText = `Catatan: ${note.Judul}`;
+            modalBody.innerHTML = `
+                <p><strong class="font-semibold text-gray-900">Mata Kuliah:</strong> ${note['Mata Kuliah']}</p>
+                <p class="whitespace-pre-wrap"><strong class="font-semibold text-gray-900 block">Isi Catatan:</strong>${note['Isi Catatan']}</p>
+                <p class="mt-4 text-sm text-gray-500">Dibuat pada: ${new Date(note.Tanggal).toLocaleDateString('id-ID')}</p>
+            `;
+            detailModal.classList.remove('hidden');
+        }
+
+        modalCloseBtn.addEventListener('click', () => detailModal.classList.add('hidden'));
+        detailModal.addEventListener('click', (e) => { if (e.target.id === 'detail-modal') detailModal.classList.add('hidden'); });
+
+        // --- FUNGSI TAB ---
         function switchTab(tab) {
             if (tab === 'tugas') {
                 contentTugas.classList.remove('hidden');
@@ -162,62 +228,57 @@
                 tabCatatan.classList.add('active');
             }
         }
-
         tabTugas.addEventListener('click', () => switchTab('tugas'));
         tabCatatan.addEventListener('click', () => switchTab('catatan'));
 
-        // Fungsi untuk menampilkan data tugas
-        function displayTugas(tugas) {
+        // --- FUNGSI RENDER DATA ---
+        function displayTugas() {
             tugasList.innerHTML = '';
-            if (tugas.length === 0) {
+            if (allTugas.length === 0) {
                 tugasList.innerHTML = '<div class="text-center py-10 px-4 bg-white rounded-lg border border-dashed"><p class="text-gray-500">🎉 Belum ada tugas. Saatnya bersantai!</p></div>';
                 return;
             }
-            tugas.forEach(t => {
+            allTugas.forEach((t, index) => {
                 const deadline = new Date(t.Deadline);
-                const today = new Date();
-                today.setHours(0,0,0,0);
+                const today = new Date(); today.setHours(0,0,0,0);
                 const diffTime = deadline - today;
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
                 let statusColor = 'bg-green-100 text-green-800';
                 let statusText = `${diffDays} hari lagi`;
-                if (diffDays < 0) {
-                    statusColor = 'bg-red-100 text-red-800';
-                    statusText = 'Terlambat!';
-                } else if (diffDays <= 3) {
-                    statusColor = 'bg-yellow-100 text-yellow-800';
-                }
+                if (diffDays < 0) { statusColor = 'bg-red-100 text-red-800'; statusText = 'Terlambat!'; } 
+                else if (diffDays <= 3) { statusColor = 'bg-yellow-100 text-yellow-800'; }
                 
+                // Menambahkan onclick untuk memanggil fungsi showTaskDetails dengan index
                 const card = `
-                    <div class="card bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-500">
+                    <div class="card bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-500" onclick="showTaskDetails(${index})">
                         <div class="flex justify-between items-start">
                             <div>
                                 <h3 class="font-bold text-lg text-gray-800">${t['Mata Kuliah']}</h3>
-                                <p class="text-gray-600">${t.Deskripsi}</p>
+                                <p class="text-gray-600 truncate">${t.Deskripsi}</p>
                             </div>
                             <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${statusColor}">${statusText}</span>
                         </div>
-                        <p class="text-right text-xs text-gray-400 mt-3">Deadline: ${new Date(t.Deadline).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        <p class="text-right text-xs text-gray-400 mt-3">Deadline: ${new Date(t.Deadline).toLocaleDateString('id-ID')}</p>
                     </div>
                 `;
                 tugasList.innerHTML += card;
             });
         }
 
-        // Fungsi untuk menampilkan data catatan
-        function displayCatatan(catatan) {
+        function displayCatatan() {
             catatanList.innerHTML = '';
-            if (catatan.length === 0) {
+            if (allCatatan.length === 0) {
                 catatanList.innerHTML = '<div class="text-center py-10 px-4 bg-white rounded-lg border border-dashed"><p class="text-gray-500">✍️ Belum ada catatan materi. Mulai tulis sekarang!</p></div>';
                 return;
             }
-            catatan.forEach(c => {
+            allCatatan.forEach((c, index) => {
+                 // Menambahkan onclick untuk memanggil fungsi showNoteDetails dengan index
                 const card = `
-                    <div class="card bg-white p-4 rounded-lg shadow-sm border-l-4 border-amber-500">
+                    <div class="card bg-white p-4 rounded-lg shadow-sm border-l-4 border-amber-500" onclick="showNoteDetails(${index})">
                         <p class="text-xs text-gray-500 font-medium">${c['Mata Kuliah']}</p>
                         <h3 class="font-bold text-lg text-gray-800">${c.Judul}</h3>
-                        <p class="text-gray-600 mt-1 whitespace-pre-wrap">${c['Isi Catatan']}</p>
+                        <p class="text-gray-600 mt-1 truncate">${c['Isi Catatan']}</p>
                          <p class="text-right text-xs text-gray-400 mt-3">Dibuat: ${new Date(c.Tanggal).toLocaleDateString('id-ID')}</p>
                     </div>
                 `;
@@ -225,83 +286,60 @@
             });
         }
 
-        // Fungsi untuk mengambil semua data dari spreadsheet
+        // --- FUNGSI UTAMA & FETCH DATA ---
         async function fetchData() {
-            if (SCRIPT_URL === 'PASTE_URL_WEB_APP_ANDA_DI_SINI') {
-                 tugasList.innerHTML = '<div class="text-center py-10 px-4 bg-red-50 rounded-lg border border-dashed border-red-300"><p class="text-red-600">⚠️ **PENTING:** Silakan ganti `PASTE_URL_WEB_APP_ANDA_DI_SINI` di file `index.html` dengan URL Web App dari Google Apps Script Anda.</p></div>';
-                 catatanList.innerHTML = '<div class="text-center py-10 px-4 bg-red-50 rounded-lg border border-dashed border-red-300"><p class="text-red-600">⚠️ **PENTING:** Silakan ganti `PASTE_URL_WEB_APP_ANDA_DI_SINI` di file `index.html` dengan URL Web App dari Google Apps Script Anda.</p></div>';
-                 return;
-            }
             loader.classList.remove('hidden');
             try {
                 const response = await fetch(SCRIPT_URL);
                 const data = await response.json();
-                displayTugas(data.tugas);
-                displayCatatan(data.catatan);
+                allTugas = data.tugas;
+                allCatatan = data.catatan;
+                displayTugas();
+                displayCatatan();
             } catch (error) {
                 console.error('Error fetching data:', error);
-                tugasList.innerHTML = '<p class="text-red-500">Gagal memuat data. Periksa koneksi dan URL Script.</p>';
-                catatanList.innerHTML = '<p class="text-red-500">Gagal memuat data. Periksa koneksi dan URL Script.</p>';
+                tugasList.innerHTML = '<p class="text-red-500">Gagal memuat data. Periksa koneksi dan pastikan URL Apps Script benar.</p>';
+                catatanList.innerHTML = '<p class="text-red-500">Gagal memuat data. Periksa koneksi dan pastikan URL Apps Script benar.</p>';
             } finally {
                 loader.classList.add('hidden');
             }
         }
 
-        // Event listener untuk form tugas
+        // --- EVENT LISTENERS FORM SUBMIT ---
         formTugas.addEventListener('submit', async (e) => {
             e.preventDefault();
             btnSubmitTugas.disabled = true;
             btnSubmitTugas.textContent = 'Menyimpan...';
-
-            const data = {
-                type: 'tugas',
-                matkul: document.getElementById('tugas-matkul').value,
-                deskripsi: document.getElementById('tugas-deskripsi').value,
-                deadline: document.getElementById('tugas-deadline').value
-            };
-
+            const data = { type: 'tugas', matkul: document.getElementById('tugas-matkul').value, deskripsi: document.getElementById('tugas-deskripsi').value, deadline: document.getElementById('tugas-deadline').value };
             try {
                 await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(data) });
                 formTugas.reset();
                 fetchData();
             } catch (error) {
-                console.error('Error submitting tugas:', error);
-                alert('Gagal menyimpan tugas.');
+                console.error('Error submitting tugas:', error); alert('Gagal menyimpan tugas.');
             } finally {
-                btnSubmitTugas.disabled = false;
-                btnSubmitTugas.textContent = 'Simpan Tugas';
+                btnSubmitTugas.disabled = false; btnSubmitTugas.textContent = 'Simpan Tugas';
             }
         });
 
-        // Event listener untuk form catatan
         formCatatan.addEventListener('submit', async (e) => {
             e.preventDefault();
-            btnSubmitCatatan.disabled = true;
-            btnSubmitCatatan.textContent = 'Menyimpan...';
-            
-            const data = {
-                type: 'catatan',
-                matkul: document.getElementById('catatan-matkul').value,
-                judul: document.getElementById('catatan-judul').value,
-                isi: document.getElementById('catatan-isi').value
-            };
-
+            btnSubmitCatatan.disabled = true; btnSubmitCatatan.textContent = 'Menyimpan...';
+            const data = { type: 'catatan', matkul: document.getElementById('catatan-matkul').value, judul: document.getElementById('catatan-judul').value, isi: document.getElementById('catatan-isi').value };
             try {
                 await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(data) });
                 formCatatan.reset();
                 fetchData();
             } catch (error) {
-                console.error('Error submitting catatan:', error);
-                alert('Gagal menyimpan catatan.');
+                console.error('Error submitting catatan:', error); alert('Gagal menyimpan catatan.');
             } finally {
-                btnSubmitCatatan.disabled = false;
-                btnSubmitCatatan.textContent = 'Simpan Catatan';
+                btnSubmitCatatan.disabled = false; btnSubmitCatatan.textContent = 'Simpan Catatan';
             }
         });
 
         // Panggil fetchData saat halaman pertama kali dimuat
         document.addEventListener('DOMContentLoaded', () => {
-            switchTab('tugas'); // Atur tab default ke tugas
+            switchTab('tugas');
             fetchData();
         });
     </script>
