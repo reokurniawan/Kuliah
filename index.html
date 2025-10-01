@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajer Tugas & Catatan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* Latar belakang lebih lembut */
+        }
+        .tab-button.active {
+            border-bottom-width: 3px;
+            font-weight: 600;
+        }
+        .task-tab.active {
+            border-color: #3b82f6; /* Blue 500 */
+            color: #2563eb; /* Blue 600 */
+        }
+        .note-tab.active {
+            border-color: #f59e0b; /* Amber 500 */
+            color: #d97706; /* Amber 600 */
+        }
+        .form-container, .card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.3s ease-in-out;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .loader {
+            border-top-color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-6 max-w-6xl">
+        <header class="text-center mb-6">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900">Task Manager</h1>
+            <p class="text-gray-500 mt-2">Fokus pada apa yang penting, selesaikan tugas, dan catat idemu.</p>
+        </header>
+
+        <div id="loader" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 hidden">
+            <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24"></div>
+        </div>
+
+        <!-- Navigasi Tab -->
+        <div class="border-b border-gray-200 mb-6">
+            <nav class="flex -mb-px space-x-6" aria-label="Tabs">
+                <button id="tab-tugas" class="tab-button task-tab active flex items-center space-x-2 whitespace-nowrap py-4 px-1 text-base text-gray-500 hover:text-blue-600 hover:border-blue-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                    <span>Tugas Saya</span>
+                </button>
+                <button id="tab-catatan" class="tab-button note-tab flex items-center space-x-2 whitespace-nowrap py-4 px-1 text-base text-gray-500 hover:text-amber-600 hover:border-amber-500">
+                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                    <span>Catatan Materi</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Konten Tab -->
+        <div id="tab-content">
+            <!-- Konten Tugas -->
+            <div id="content-tugas">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-1">
+                        <div class="form-container bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                            <h2 class="text-xl font-semibold mb-4 text-blue-800">Tambah Tugas Baru</h2>
+                            <form id="form-tugas" class="space-y-4">
+                                <div>
+                                    <label for="tugas-matkul" class="block text-sm font-medium text-gray-700">Mata Kuliah</label>
+                                    <input type="text" id="tugas-matkul" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label for="tugas-deskripsi" class="block text-sm font-medium text-gray-700">Deskripsi Tugas</label>
+                                    <textarea id="tugas-deskripsi" rows="3" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+                                </div>
+                                <div>
+                                    <label for="tugas-deadline" class="block text-sm font-medium text-gray-700">Deadline</label>
+                                    <input type="date" id="tugas-deadline" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <button type="submit" id="btn-submit-tugas" class="w-full bg-blue-600 text-white font-semibold py-2.5 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out">Simpan Tugas</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2">
+                         <h2 class="text-2xl font-bold mb-4">Daftar Tugas Aktif</h2>
+                         <div id="tugas-list" class="space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Konten Catatan -->
+            <div id="content-catatan" class="hidden">
+                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-1">
+                        <div class="form-container bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                            <h2 class="text-xl font-semibold mb-4 text-amber-800">Tambah Catatan Materi</h2>
+                            <form id="form-catatan" class="space-y-4">
+                                <div>
+                                    <label for="catatan-matkul" class="block text-sm font-medium text-gray-700">Mata Kuliah</label>
+                                    <input type="text" id="catatan-matkul" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-amber-500 focus:border-amber-500">
+                                </div>
+                                <div>
+                                    <label for="catatan-judul" class="block text-sm font-medium text-gray-700">Judul Materi</label>
+                                    <input type="text" id="catatan-judul" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-amber-500 focus:border-amber-500">
+                                </div>
+                                <div>
+                                    <label for="catatan-isi" class="block text-sm font-medium text-gray-700">Isi Catatan</label>
+                                    <textarea id="catatan-isi" rows="4" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-amber-500 focus:border-amber-500"></textarea>
+                                </div>
+                                <button type="submit" id="btn-submit-catatan" class="w-full bg-amber-500 text-white font-semibold py-2.5 px-4 rounded-lg hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition duration-150 ease-in-out">Simpan Catatan</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2">
+                         <h2 class="text-2xl font-bold mb-4">Kumpulan Catatan</h2>
+                         <div id="catatan-list" class="space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // PENTING: Ganti URL ini dengan URL Web App dari Google Apps Script Anda setelah deploy.
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzI_m3Ahft7J_NHBNNa3wcfqn4Lvbui12qFM5JNuS7G2c_Pu-An1FcDrquMFr-oyOSM/exec';
+        
+        const tabTugas = document.getElementById('tab-tugas');
+        const tabCatatan = document.getElementById('tab-catatan');
+        const contentTugas = document.getElementById('content-tugas');
+        const contentCatatan = document.getElementById('content-catatan');
+
+        const formTugas = document.getElementById('form-tugas');
+        const formCatatan = document.getElementById('form-catatan');
+        const btnSubmitTugas = document.getElementById('btn-submit-tugas');
+        const btnSubmitCatatan = document.getElementById('btn-submit-catatan');
+        const tugasList = document.getElementById('tugas-list');
+        const catatanList = document.getElementById('catatan-list');
+        const loader = document.getElementById('loader');
+
+        // Fungsi untuk ganti tab
+        function switchTab(tab) {
+            if (tab === 'tugas') {
+                contentTugas.classList.remove('hidden');
+                contentCatatan.classList.add('hidden');
+                tabTugas.classList.add('active');
+                tabCatatan.classList.remove('active');
+            } else {
+                contentTugas.classList.add('hidden');
+                contentCatatan.classList.remove('hidden');
+                tabTugas.classList.remove('active');
+                tabCatatan.classList.add('active');
+            }
+        }
+
+        tabTugas.addEventListener('click', () => switchTab('tugas'));
+        tabCatatan.addEventListener('click', () => switchTab('catatan'));
+
+        // Fungsi untuk menampilkan data tugas
+        function displayTugas(tugas) {
+            tugasList.innerHTML = '';
+            if (tugas.length === 0) {
+                tugasList.innerHTML = '<div class="text-center py-10 px-4 bg-white rounded-lg border border-dashed"><p class="text-gray-500">🎉 Belum ada tugas. Saatnya bersantai!</p></div>';
+                return;
+            }
+            tugas.forEach(t => {
+                const deadline = new Date(t.Deadline);
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                const diffTime = deadline - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                let statusColor = 'bg-green-100 text-green-800';
+                let statusText = `${diffDays} hari lagi`;
+                if (diffDays < 0) {
+                    statusColor = 'bg-red-100 text-red-800';
+                    statusText = 'Terlambat!';
+                } else if (diffDays <= 3) {
+                    statusColor = 'bg-yellow-100 text-yellow-800';
+                }
+                
+                const card = `
+                    <div class="card bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-500">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-800">${t['Mata Kuliah']}</h3>
+                                <p class="text-gray-600">${t.Deskripsi}</p>
+                            </div>
+                            <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${statusColor}">${statusText}</span>
+                        </div>
+                        <p class="text-right text-xs text-gray-400 mt-3">Deadline: ${new Date(t.Deadline).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                    </div>
+                `;
+                tugasList.innerHTML += card;
+            });
+        }
+
+        // Fungsi untuk menampilkan data catatan
+        function displayCatatan(catatan) {
+            catatanList.innerHTML = '';
+            if (catatan.length === 0) {
+                catatanList.innerHTML = '<div class="text-center py-10 px-4 bg-white rounded-lg border border-dashed"><p class="text-gray-500">✍️ Belum ada catatan materi. Mulai tulis sekarang!</p></div>';
+                return;
+            }
+            catatan.forEach(c => {
+                const card = `
+                    <div class="card bg-white p-4 rounded-lg shadow-sm border-l-4 border-amber-500">
+                        <p class="text-xs text-gray-500 font-medium">${c['Mata Kuliah']}</p>
+                        <h3 class="font-bold text-lg text-gray-800">${c.Judul}</h3>
+                        <p class="text-gray-600 mt-1 whitespace-pre-wrap">${c['Isi Catatan']}</p>
+                         <p class="text-right text-xs text-gray-400 mt-3">Dibuat: ${new Date(c.Tanggal).toLocaleDateString('id-ID')}</p>
+                    </div>
+                `;
+                catatanList.innerHTML += card;
+            });
+        }
+
+        // Fungsi untuk mengambil semua data dari spreadsheet
+        async function fetchData() {
+            if (SCRIPT_URL === 'PASTE_URL_WEB_APP_ANDA_DI_SINI') {
+                 tugasList.innerHTML = '<div class="text-center py-10 px-4 bg-red-50 rounded-lg border border-dashed border-red-300"><p class="text-red-600">⚠️ **PENTING:** Silakan ganti `PASTE_URL_WEB_APP_ANDA_DI_SINI` di file `index.html` dengan URL Web App dari Google Apps Script Anda.</p></div>';
+                 catatanList.innerHTML = '<div class="text-center py-10 px-4 bg-red-50 rounded-lg border border-dashed border-red-300"><p class="text-red-600">⚠️ **PENTING:** Silakan ganti `PASTE_URL_WEB_APP_ANDA_DI_SINI` di file `index.html` dengan URL Web App dari Google Apps Script Anda.</p></div>';
+                 return;
+            }
+            loader.classList.remove('hidden');
+            try {
+                const response = await fetch(SCRIPT_URL);
+                const data = await response.json();
+                displayTugas(data.tugas);
+                displayCatatan(data.catatan);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                tugasList.innerHTML = '<p class="text-red-500">Gagal memuat data. Periksa koneksi dan URL Script.</p>';
+                catatanList.innerHTML = '<p class="text-red-500">Gagal memuat data. Periksa koneksi dan URL Script.</p>';
+            } finally {
+                loader.classList.add('hidden');
+            }
+        }
+
+        // Event listener untuk form tugas
+        formTugas.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            btnSubmitTugas.disabled = true;
+            btnSubmitTugas.textContent = 'Menyimpan...';
+
+            const data = {
+                type: 'tugas',
+                matkul: document.getElementById('tugas-matkul').value,
+                deskripsi: document.getElementById('tugas-deskripsi').value,
+                deadline: document.getElementById('tugas-deadline').value
+            };
+
+            try {
+                await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(data) });
+                formTugas.reset();
+                fetchData();
+            } catch (error) {
+                console.error('Error submitting tugas:', error);
+                alert('Gagal menyimpan tugas.');
+            } finally {
+                btnSubmitTugas.disabled = false;
+                btnSubmitTugas.textContent = 'Simpan Tugas';
+            }
+        });
+
+        // Event listener untuk form catatan
+        formCatatan.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            btnSubmitCatatan.disabled = true;
+            btnSubmitCatatan.textContent = 'Menyimpan...';
+            
+            const data = {
+                type: 'catatan',
+                matkul: document.getElementById('catatan-matkul').value,
+                judul: document.getElementById('catatan-judul').value,
+                isi: document.getElementById('catatan-isi').value
+            };
+
+            try {
+                await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(data) });
+                formCatatan.reset();
+                fetchData();
+            } catch (error) {
+                console.error('Error submitting catatan:', error);
+                alert('Gagal menyimpan catatan.');
+            } finally {
+                btnSubmitCatatan.disabled = false;
+                btnSubmitCatatan.textContent = 'Simpan Catatan';
+            }
+        });
+
+        // Panggil fetchData saat halaman pertama kali dimuat
+        document.addEventListener('DOMContentLoaded', () => {
+            switchTab('tugas'); // Atur tab default ke tugas
+            fetchData();
+        });
+    </script>
+</body>
+</html>
+
+
